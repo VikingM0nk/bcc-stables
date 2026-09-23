@@ -21,8 +21,8 @@ function HorseInfoMenu()
         style = {},
         contentslot = {
             style = {
-                ['height'] = '325px',
-                ['min-height'] = '325px'
+                ['height'] = '420px',
+                ['min-height'] = '420px'
             }
         },
         draggable = true,
@@ -64,6 +64,26 @@ function HorseInfoMenu()
         slot = 'header',
         style = textDisplayStyle
     })
+
+    if HorseCare and HorseCare.InfoLines then
+        for _, line in ipairs(HorseCare.InfoLines()) do
+            homePage:RegisterElement('textdisplay', {
+                value = line,
+                slot = 'header',
+                style = textDisplayStyle
+            })
+        end
+    end
+
+    if HorseTraining and HorseTraining.InfoLines then
+        for _, line in ipairs(HorseTraining.InfoLines()) do
+            homePage:RegisterElement('textdisplay', {
+                value = line,
+                slot = 'header',
+                style = textDisplayStyle
+            })
+        end
+    end
 
     homePage:RegisterElement('textdisplay', {
         value = _U('horseInfoLevel') .. currentLevel .. ' | ' .. _U('horseInfoCurXp') .. currentXp,

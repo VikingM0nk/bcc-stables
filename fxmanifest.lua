@@ -8,7 +8,11 @@ author 'BCC Team'
 shared_scripts {
     'config/*.lua',
     'locale.lua',
-    'languages/*.lua'
+    'languages/*.lua',
+    'shared/catalog.lua',
+    'shared/genetics.lua',
+    'shared/presets.lua',
+    'shared/settings.lua'
 }
 
 client_scripts {
@@ -16,10 +20,19 @@ client_scripts {
     'client/main.lua',
     'client/horseinfo.lua',
     'client/menus/*.lua',
+    'client/care.lua',
+    'client/training.lua',
+    'client/stablebiz.lua'
 }
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
+    'server/schema.lua',
+    'server/horseutil.lua',
+    'server/ownership.lua',
+    'server/auction.lua',
+    'server/exports.lua',
+    'server/training.lua',
     'server/main.lua'
 }
 

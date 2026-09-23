@@ -13,7 +13,7 @@ Trainers = {
         npc = {
             active = true,                              -- Turns NPC On / Off
             model = 'MP_LM_STEALHORSE_BUYERS_01',       -- Model Used for NPC
-            coords = vector3(-359.5, 774.31, 116.39),   -- NPC and Shop Blip Positions
+            coords = vector3(-357.5, 777.78, 116.95),   -- NPC and Shop Blip Positions
             heading = 356.94,                           -- NPC Heading
             distance = 100.0,                           -- Distance Between Player and Shop for NPC to Spawn
         }

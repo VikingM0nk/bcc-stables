@@ -29,10 +29,13 @@ Config.keys = {
     sell = 0x80F28E95,    --[L] Sell Tamed Horse at Sell Point
     keep = 0x27D1C284,    --[R] Keep Tamed Horse at Sell Point
     trade = 0x27D1C284,   --[R] Trade Horse to Player
-    drink = 0xD8F73058,   --[U] Horse Drink when in Water
+    drink = 0xD8F73058,   --[U] Horse Drink / Water
     rest = 0x620A6C5E,    --[V] Horse Rest
     sleep = 0x43CDA5B0,   --[Z] Horse Sleep
     wallow = 0x9959A6F0,  --[C] Horse Wallow
+    brush = 0x8CC9CD42,   --[X] Brush Horse
+    feed = 0xE30CD707,    --[R] Feed Horse
+    graze = 0x620A6C5E,   --[V] Graze
     loot = 0x27D1C284,    --[R] Loot Horse
 }
 -----------------------------------------------------
