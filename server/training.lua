@@ -80,12 +80,18 @@ local function nearTrainerYard(coords)
     return false
 end
 
+local function asInt(n)
+    if n == true then return 1 end
+    if n == false or n == nil then return 0 end
+    return math.floor(tonumber(n) or 0)
+end
+
 local function clampLevel(n)
-    n = tonumber(n) or 0
+    n = asInt(n)
     local maxLevel = tonumber(cfg().MaxLevel) or 5
     if n < 0 then return 0 end
     if n > maxLevel then return maxLevel end
-    return math.floor(n)
+    return n
 end
 
 local function trainingSnapshot(row)
@@ -169,6 +175,12 @@ end)
 Core.Callback.Register('bcc-stables:TrainHorse', function(source, cb, horseId, skill, ownerSrc)
     local src = source
     if Schema and Schema.Wait then Schema.Wait() end
+    if type(horseId) == 'table' then
+        local data = horseId
+        horseId = data.horseId
+        skill = data.skill
+        ownerSrc = data.ownerSrc
+    end
     local trainer = characterOf(src)
     if not trainer or not isTrainer(trainer, src) then
         Core.NotifyRightTip(src, _U('trainNeedJob'), 4000)

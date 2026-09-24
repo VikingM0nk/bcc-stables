@@ -18,11 +18,11 @@ local COLUMNS = {
     { 'foal_phase', 'INT NOT NULL DEFAULT -1' },
     { 'locked', 'TINYINT(1) NOT NULL DEFAULT 0' },
     { 'lock_reason', "VARCHAR(40) NOT NULL DEFAULT ''" },
-    { 'train_speed', 'TINYINT(1) NOT NULL DEFAULT 0' },
-    { 'train_health', 'TINYINT(1) NOT NULL DEFAULT 0' },
-    { 'train_stamina', 'TINYINT(1) NOT NULL DEFAULT 0' },
-    { 'train_bravery', 'TINYINT(1) NOT NULL DEFAULT 0' },
-    { 'train_bond', 'TINYINT(1) NOT NULL DEFAULT 0' },
+    { 'train_speed', 'INT NOT NULL DEFAULT 0' },
+    { 'train_health', 'INT NOT NULL DEFAULT 0' },
+    { 'train_stamina', 'INT NOT NULL DEFAULT 0' },
+    { 'train_bravery', 'INT NOT NULL DEFAULT 0' },
+    { 'train_bond', 'INT NOT NULL DEFAULT 0' },
     { 'last_train_at', 'BIGINT NOT NULL DEFAULT 0' },
 }
 
@@ -103,6 +103,14 @@ function Schema.Ensure()
         local col, def = COLUMNS[i][1], COLUMNS[i][2]
         pcall(function()
             MySQL.query.await(('ALTER TABLE `player_horses` ADD COLUMN `%s` %s'):format(col, def))
+        end)
+    end
+
+    -- TINYINT(1) is treated as boolean by some MySQL drivers (1 => true).
+    local trainCols = { 'train_speed', 'train_health', 'train_stamina', 'train_bravery', 'train_bond' }
+    for i = 1, #trainCols do
+        pcall(function()
+            MySQL.query.await(('ALTER TABLE `player_horses` MODIFY COLUMN `%s` INT NOT NULL DEFAULT 0'):format(trainCols[i]))
         end)
     end
 end

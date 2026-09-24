@@ -26,18 +26,22 @@ local function cfg()
     return Config.HorseTraining or {}
 end
 
-local function setRank(horse, attr, rank)
-    rank = math.max(0, math.min(10, math.floor(tonumber(rank) or 0)))
+local function asInt(n)
+    if n == true then return 1 end
+    if n == false or n == nil then return 0 end
+    return math.floor(tonumber(n) or 0)
+end
+
+local function setBonusRank(horse, attr, bonus)
+    bonus = math.max(0, math.min(10, asInt(bonus)))
     pcall(function()
-        Citizen.InvokeNative(0x5DA12E025D47D4E5, horse, attr, rank) -- SetAttributeBaseRank
+        Citizen.InvokeNative(0x920F9488BD115EFB, horse, attr, bonus) -- SetAttributeBonusRank
     end)
 end
 
-local function addCore(horse, core, amount)
-    amount = tonumber(amount) or 0
-    if amount == 0 then return end
-    local cur = Citizen.InvokeNative(0x36731AC041289BB1, horse, core, Citizen.ResultAsInteger()) or 0
-    Citizen.InvokeNative(0xC6258F41D86676E0, horse, core, math.min(100, cur + amount))
+local function fillCore(horse, core, value)
+    value = math.max(0, math.min(100, math.floor(tonumber(value) or 0)))
+    Citizen.InvokeNative(0xC6258F41D86676E0, horse, core, value) -- SetAttributeCoreValue
 end
 
 local function startRateThread()
@@ -45,13 +49,14 @@ local function startRateThread()
     rateThread = true
     CreateThread(function()
         while true do
-            Wait(2000)
-            local lvl = 0
-            if MyHorse and MyHorse ~= 0 and DoesEntityExist(MyHorse) then
-                lvl = tonumber(HorseTraining.Levels.speed) or 0
-                if lvl > 0 then
-                    pcall(SetPedMoveRateOverride, MyHorse, 1.0 + (lvl * (cfg().SpeedPerLevel or 0.045)))
-                end
+            Wait(1000)
+            local lvl = tonumber(HorseTraining.Levels.speed) or 0
+            if MyHorse and MyHorse ~= 0 and DoesEntityExist(MyHorse) and lvl > 0 then
+                local rate = 1.0 + (lvl * (cfg().SpeedPerLevel or 0.06))
+                pcall(SetPedMoveRateOverride, MyHorse, rate)
+                pcall(function()
+                    Citizen.InvokeNative(0x085BFDF83E2CF4E4, MyHorse, rate)
+                end)
             end
         end
     end)
@@ -70,55 +75,49 @@ function HorseTraining.Apply(horse, data)
         bond = data.train_bond,
     }
     HorseTraining.Levels = {
-        speed = tonumber(levels.speed) or 0,
-        health = tonumber(levels.health) or 0,
-        stamina = tonumber(levels.stamina) or 0,
-        bravery = tonumber(levels.bravery) or 0,
-        bond = tonumber(levels.bond) or 0,
+        speed = asInt(levels.speed),
+        health = asInt(levels.health),
+        stamina = asInt(levels.stamina),
+        bravery = asInt(levels.bravery),
+        bond = asInt(levels.bond),
     }
 
-    if HorseTraining.LastHorse ~= horse then
-        HorseTraining.Applied = { speed = 0, health = 0, stamina = 0, bravery = 0, bond = 0 }
-        HorseTraining.LastHorse = horse
-    end
-    local applied = HorseTraining.Applied
     local wanted = HorseTraining.Levels
-    local coreBoost = tonumber(cfg().CorePerLevel) or 8
+    local coreBoost = tonumber(cfg().CorePerLevel) or 12
 
-    local dSpeed = wanted.speed - (applied.speed or 0)
-    if dSpeed > 0 then
-        local curSpeed = Citizen.InvokeNative(0x147149F2E909323C, horse, ATTR.SPEED, Citizen.ResultAsInteger()) or 0
-        local curAccel = Citizen.InvokeNative(0x147149F2E909323C, horse, ATTR.ACCEL, Citizen.ResultAsInteger()) or 0
-        setRank(horse, ATTR.SPEED, curSpeed + dSpeed)
-        setRank(horse, ATTR.ACCEL, curAccel + dSpeed)
-    end
     if wanted.speed > 0 then
-        pcall(SetPedMoveRateOverride, horse, 1.0 + (wanted.speed * (cfg().SpeedPerLevel or 0.045)))
+        setBonusRank(horse, ATTR.SPEED, wanted.speed * 2)
+        setBonusRank(horse, ATTR.ACCEL, wanted.speed * 2)
+        setBonusRank(horse, ATTR.AGILITY, wanted.speed)
         startRateThread()
     end
 
-    local dHealth = wanted.health - (applied.health or 0)
-    if dHealth > 0 then
-        local cur = Citizen.InvokeNative(0x147149F2E909323C, horse, ATTR.HEALTH, Citizen.ResultAsInteger()) or 0
-        setRank(horse, ATTR.HEALTH, cur + dHealth)
-        addCore(horse, 0, dHealth * coreBoost)
+    if wanted.health > 0 then
+        setBonusRank(horse, ATTR.HEALTH, wanted.health * 2)
+        fillCore(horse, 0, math.min(100, 70 + wanted.health * coreBoost))
+        local extra = wanted.health * 40
+        pcall(function()
+            if HorseTraining.LastHorse ~= horse or not HorseTraining.BaseMaxHealth then
+                HorseTraining.BaseMaxHealth = GetEntityMaxHealth(horse)
+            end
+            local base = HorseTraining.BaseMaxHealth or GetEntityMaxHealth(horse) or 150
+            SetEntityMaxHealth(horse, base + extra)
+            SetEntityHealth(horse, math.min(base + extra, GetEntityHealth(horse) + extra), 0)
+        end)
     end
 
-    local dStamina = wanted.stamina - (applied.stamina or 0)
-    if dStamina > 0 then
-        local cur = Citizen.InvokeNative(0x147149F2E909323C, horse, ATTR.STAMINA, Citizen.ResultAsInteger()) or 0
-        setRank(horse, ATTR.STAMINA, cur + dStamina)
-        addCore(horse, 1, dStamina * coreBoost)
+    if wanted.stamina > 0 then
+        setBonusRank(horse, ATTR.STAMINA, wanted.stamina * 2)
+        fillCore(horse, 1, math.min(100, 70 + wanted.stamina * coreBoost))
+        pcall(function()
+            Citizen.InvokeNative(0x675680D089BFA21F, horse, wanted.stamina * 20.0)
+        end)
     end
 
-    local dBrave = wanted.bravery - (applied.bravery or 0)
-    if dBrave > 0 or wanted.bravery > 0 then
-        if dBrave > 0 then
-            local cur = Citizen.InvokeNative(0x147149F2E909323C, horse, ATTR.COURAGE, Citizen.ResultAsInteger()) or 0
-            setRank(horse, ATTR.COURAGE, cur + (dBrave * 2))
-        end
-        Citizen.InvokeNative(0x1913FE4CBF41C463, horse, 113, wanted.bravery >= 2)
-        Citizen.InvokeNative(0x1913FE4CBF41C463, horse, 312, wanted.bravery >= 3)
+    if wanted.bravery > 0 then
+        setBonusRank(horse, ATTR.COURAGE, wanted.bravery * 2)
+        Citizen.InvokeNative(0x1913FE4CBF41C463, horse, 113, wanted.bravery >= 1)
+        Citizen.InvokeNative(0x1913FE4CBF41C463, horse, 312, wanted.bravery >= 2)
         if wanted.bravery >= 4 then
             Citizen.InvokeNative(0x1913FE4CBF41C463, horse, 471, true)
         end
@@ -126,8 +125,10 @@ function HorseTraining.Apply(horse, data)
 
     if data.xp then
         Citizen.InvokeNative(0x09A59688C26D88DF, horse, ATTR.BOND, tonumber(data.xp) or 0)
+        Citizen.InvokeNative(0x75415EE0CB583760, horse, ATTR.BOND, 0)
     end
 
+    HorseTraining.LastHorse = horse
     HorseTraining.Applied = {
         speed = wanted.speed, health = wanted.health, stamina = wanted.stamina,
         bravery = wanted.bravery, bond = wanted.bond,
@@ -221,8 +222,19 @@ local function openSkillPage(menu, target, maxLevel, fees)
                     end
                 end
                 playLesson(horse)
-                Core.Callback.TriggerAwait('bcc-stables:TrainHorse', target.horseId, skill, target.ownerSrc)
+                local payload = Core.Callback.TriggerAwait('bcc-stables:TrainHorse', {
+                    horseId = target.horseId,
+                    skill = skill,
+                    ownerSrc = target.ownerSrc,
+                })
                 TrainingBusy = false
+                if type(payload) == 'table' and payload.levels then
+                    if horse and horse ~= 0 and DoesEntityExist(horse) then
+                        HorseTraining.Apply(horse, payload)
+                    end
+                    Wait(250)
+                    HorseTraining.OpenMenu()
+                end
             end)
         end)
     end
